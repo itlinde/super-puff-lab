@@ -54,25 +54,32 @@ Oct 13, 2026 · @isabella · Source of truth for every build session. Anything n
 | Control | Type | Stops |
 | --- | --- | --- |
 | Colour | Swatches styled to match the sliders | Only colours the current style comes in |
-| Length | Slider | XtraShorty (only if currently sold) → Shorty → Original → Mid → Long |
-| Fit | 2-stop slider | Oversized (Super Puff™) ↔ Slim (SuperSnug Puff™) |
-| Fabric | Selector (form TBD after data check) | From Aritzia's fabric list, limited to those used on in-scope Super Puff styles: Aura Shine™, cliMATTE™, Hi-Gloss, Liquid Shine, Lite Shine, Orbit Stretch™, Rainstop™ |
-| Sleeves | Toggle | Sleeves / Vest (Vest only available at Mid) |
+| Length | Slider | XtraShorty → Shorty → Original → Mid → Long |
+| Fit | 2-stop slider | Oversized (The Super Puff™) ↔ Slim (The SuperSnug Puff™) |
+| Fabric | Segmented selector (5 options) | cliMATTE™ · Rainstop™ · Hi-Gloss · Orbit Stretch™ · Liquid Shine |
+| Sleeves | Toggle | Sleeves / Vest |
 
 - **Combinations that don't exist:** greyed out and can't be selected. The jacket only ever shows real products.
-- **Excluded:** Super Ruff Puff (dog), Super Après Puff™, Super Chalet Puff™, Superstuff Puff™.
-- **Verify all of the above against aritzia.com before building:** names, stock, and which fabric goes with which family. Report anything that doesn't match; don't invent stops.
+- **Excluded:** Super Ruff Puff (dog), Super Après Puff™, Super Chalet Puff™, SuperStuff Puff™, SuperPOP Puff™, Super Resort Puff™, Super Baby Puff™, LoHip Vest, men's styles, accessories.
 
-### Fabric reference (Aritzia's wording, from their fabric filter)
-| Fabric | Aritzia description |
-| --- | --- |
-| Aura Shine™ | Water-repellent 100% recycled nylon ripstop with a soft feel and subtle shine. |
-| cliMATTE™ | Matte Japanese ripstop that's water repellent and wind resistant. |
-| Hi-Gloss | Water-repellent, wind-resistant French taffeta with a glossy finish. |
-| Liquid Shine | Water-resistant, windproof stretch fabric with a velvety sheen. |
-| Lite Shine | Soft, water-repellent fabric with a subtle sheen. |
-| Orbit Stretch™ | Water-repellent, soft-matte fabric with all-around stretch. |
-| Rainstop™ | Waterproof, windproof matte ripstop with a soft feel and 2-layer construction. |
+### Verified from the saved Super Puff page (Oct 13, 2026)
+- 32 in-scope products; full matrix in `src/data/variants.ts`.
+- **Five fabrics, not seven.** Lite Shine is only on SuperStuff and Aura Shine only on SuperPOP, both out of scope.
+- **Rainstop™ is the ₂O line.** "The Super Puff₂O™" / "SuperSnug Puff₂O™" are simply the Rainstop™ versions.
+- **Vests exist at Shorty, Original, Mid and Long** (not only Mid), in cliMATTE™, Hi-Gloss or Liquid Shine depending on length.
+- **SuperSnug has no Shorty or XtraShorty.** XtraShorty is cliMATTE™ only and currently on sale.
+- Still to verify from individual product pages: full colour lists, descriptions, fill power, temperature ratings.
+
+### Fabric copy (verbatim, "Weatherproof Fabrics" story on the Super Puff page)
+| Fabric | Copy | Video id |
+| --- | --- | --- |
+| cliMATTE™ | Matte Japanese ripstop that’s water repellent and wind resistant. | fw26-super-puff-fabric-climatte-app |
+| Rainstop™ | Waterproof, windproof Japanese ripstop with two-layer construction. | fw26-super-puff-fabric-rainstop-app |
+| Hi-Gloss | water-repellent and wind-resistant French taffeta with a glossy finish and a soft feel. | fw26-super-puff-fabric-higloss-app |
+| Orbit Stretch™ | water-repellent, soft-matte fabric with all-around stretch. | fw26-super-puff-fabric-orbit-stretch-app |
+| Liquid Shine | water-resistant, windproof stretch fabric with a velvety look and a sleek feel. | fw26-super-puff-fabric-liquidshine-app |
+
+Videos are served from `assets.aritzia.com/video/upload/…/<id>`; they weren't included in the saved page and still need downloading.
 
 ### Fabric popup
 - A small square popup, like a toast, above the fabric control. **Fabric only.**

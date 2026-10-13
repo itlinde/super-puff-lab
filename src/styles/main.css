@@ -1,0 +1,58 @@
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  background: var(--c-stage);
+  color: var(--c-ink);
+  font-family: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.poster { position: fixed; inset: 0; }
+
+.wordmark {
+  position: absolute;
+  left: 0; right: 0;
+  top: 7vh;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+.wordmark__text {
+  font-family: var(--f-display);
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--c-black);
+  transform-origin: 50% 0;
+}
+.wordmark__text sup { font-size: 0.28em; vertical-align: top; position: relative; top: 0.18em; margin-left: 0.04em; }
+
+.stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.grain {
+  position: fixed; inset: -50%;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+
+/* --- Temporary slice-2 review panel ----------------------------------- */
+.review {
+  position: fixed; top: var(--s-4); right: var(--s-4);
+  width: 232px; padding: var(--s-4);
+  background: rgba(255,255,255,0.92); border: 1px solid #0000001a;
+  font: 13px/1.4 var(--f-body); z-index: 10;
+}
+.review h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 var(--s-3); color: var(--c-muted); font-weight: 500; }
+.review label { display: block; margin-bottom: var(--s-2); }
+.review label span { display: block; font-size: 11px; color: var(--c-muted); margin-bottom: 2px; }
+.review select { width: 100%; font: inherit; padding: 4px 6px; border: 1px solid #0000002a; background: #fff; border-radius: 0; }
+.review p { margin: var(--s-3) 0 0; font-size: 11px; color: var(--c-muted); }
+.review .variant-name { margin-top: var(--s-3); font-size: 12px; color: var(--c-ink); }

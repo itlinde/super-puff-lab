@@ -1,0 +1,21 @@
+/* Tokens. Neutrals are Aritzia's (from aritzia.com's stylesheet);
+   the stage grey is sampled from Isabella's mockup. */
+:root {
+  --c-black: #000000;
+  --c-white: #ffffff;
+  --c-surface: #f4f4f4;
+  --c-muted: #767676;
+  --c-error: #db1216;
+  --c-stage: #ededed;
+  --c-ink: #111111;
+
+  /* Aritzia uses "Non-Seasonal Geo" (licensed); Jost is the closest free geometric match. */
+  --f-body: 'Jost', 'Futura', system-ui, sans-serif;
+  /* Wide geometric caps, closest free match to the Super Puff logotype. */
+  --f-display: 'Syncopate', 'Jost', sans-serif;
+
+  /* Aritzia's spacing scale */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+
+  --grain-opacity: 0.11;
+}
