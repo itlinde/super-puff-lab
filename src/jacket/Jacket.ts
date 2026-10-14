@@ -131,23 +131,29 @@ export class Jacket {
       const t = -y / S.L; // 0 at shoulders, 1 at hem
       const flare = 1 + S.flare * t * t;
       const tuck = 1 - 0.012 * smoothstep(0.9, 1, t); // hem draws in very slightly
-      section(theta, S.W * flare * tuck, S.Dp * flare * tuck, p, dir);
-      // Smooth yoke across the chest and shoulders, quilted baffles below it.
-      const yoke = -YOKE;
+      // Vests narrow toward the shoulder so the armhole reads and the top slopes.
+      // Sleeved: the upper sides widen into the sleeve caps so the junction hides under them.
+      const vestTaper = S.sleeves ? 1 + 0.12 * smoothstep(-YOKE - 0.12, 0, y) : 1 - 0.2 * smoothstep(-0.32, 0, y);
+      section(theta, S.W * flare * tuck * vestTaper, S.Dp * flare * tuck, p, dir);
+      const sinT = Math.abs(Math.sin(theta));
+      // Down shifts to the front and back panels; the sides stay straighter,
+      // and the panels dome slightly across their width.
+      const across = 1 + 0.4 * (1 - Math.min(1, Math.pow(p.x / (S.W * 0.95), 2)));
+      const panel = (0.45 + 0.55 * sinT) * across;
+      // Yoke seam: curves down toward the sleeves, like the reference.
+      const yoke = this.yokeY(theta);
       let amt: number;
       if (y > yoke) {
-        const f = (y - yoke) / (YOKE + DOME);
-        amt = S.puff * 0.9 * baffle(f, 0.7) * puffScale * Math.pow(Math.abs(Math.sin(theta)), 1.5);
-        this.lastShade = seamShade(f * 0.5, 0.2);
+        const f = (y - yoke) / (DOME - yoke);
+        amt = S.puff * 1.15 * baffle(f, 0.55) * puffScale * panel;
+        this.lastShade = seamShade(f * 0.5, 0.24);
       } else {
-        const span = S.L - YOKE;
+        const span = S.L + yoke;
         const nb = Math.max(1, Math.round(span / S.bh));
         const frac = (y + S.L) / (span / nb);
-        amt = S.puff * baffle(frac - Math.floor(frac)) * puffScale;
+        amt = S.puff * baffle(frac - Math.floor(frac)) * puffScale * panel;
         this.lastShade = seamShade(frac, 0.22);
       }
-      // Down shifts to the front and back panels; the sides stay straighter.
-      amt *= 0.45 + 0.55 * Math.abs(Math.sin(theta));
       // Flatten under the front placket.
       const front = Math.exp(-Math.pow(p.x / 0.1, 2)) * (p.z > 0 ? 1 : 0);
       amt *= 1 - 0.85 * front;
@@ -165,15 +171,25 @@ export class Jacket {
       // Shoulder dome: rounds from the shoulder line into the neck.
       const s = Math.min(y / DOME, 1);
       // Sloped shoulders: near-vertical at the shoulder line, then a steady slope to the neck.
-      const k = 1 - Math.pow(s, 1.25);
-      section(theta, S.neckRx + (S.W - S.neckRx) * k, S.neckRz + (S.Dp - S.neckRz) * k, p, dir);
-      const f = (y + YOKE) / (YOKE + DOME);
-      // Yoke fullness sits on the chest and back only, so the shoulder line stays clean.
-      p.addScaledVector(dir, S.puff * 0.9 * baffle(f, 0.7) * puffScale * Math.pow(Math.abs(Math.sin(theta)), 1.5));
+      const k = 1 - Math.pow(s, S.sleeves ? 1.25 : 1.0);
+      const vestTaper = S.sleeves ? 1.12 : 0.8;
+      section(theta, S.neckRx + (S.W * vestTaper - S.neckRx) * k, S.neckRz + (S.Dp - S.neckRz) * k, p, dir);
+      // The yoke's fullness continues up to the collar, on the chest and back only.
+      const yoke = this.yokeY(theta);
+      const f = (y - yoke) / (DOME - yoke);
+      const across = 1 + 0.4 * (1 - Math.min(1, Math.pow(p.x / (S.W * 0.95), 2)));
+      const sinT = Math.abs(Math.sin(theta));
+      const front = Math.exp(-Math.pow(p.x / 0.1, 2)) * (p.z > 0 ? 1 : 0); // under the placket
+      p.addScaledVector(dir, S.puff * 1.15 * baffle(f, 0.55) * puffScale * (0.45 + 0.55 * sinT) * across * (1 - s * 0.6) * (1 - 0.85 * front));
       p.y = y;
       this.lastShade = 1;
     }
     return p;
+  }
+
+  /** Height of the yoke seam at angle theta: lowest under the arms. */
+  private yokeY(theta: number) {
+    return -YOKE - 0.07 * Math.pow(Math.cos(theta), 2);
   }
 
   private build() {
@@ -251,23 +267,31 @@ export class Jacket {
 
   // ----------------------------------------------------------------- hood
   private buildHood() {
+    // A soft, slumped hood worn down behind the collar: low crown, sides that
+    // spill out past the collar, the face opening tipped up and forward so the
+    // lining shows around the collar, and a few gentle folds.
     const S = this.shape;
-    const c = new THREE.Vector3(0, DOME + COLLAR * 0.6, -0.16);
-    const R = new THREE.Vector3(S.neckRx + 0.065, 0.27, 0.3);
-    const phi0 = 1.38; // half-angle of the face opening
-    const rings = 3;
+    const collarTop = DOME + COLLAR;
+    const c = new THREE.Vector3(0, collarTop - 0.03, -0.13);
+    const R = new THREE.Vector3(S.neckRx + (S.sleeves ? 0.11 : 0.07), 0.25, 0.27); // vests: narrower shoulders, narrower hood
+    const phi0 = 1.1; // half-angle of the face opening
+    const tilt = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.22); // opening faces forward, a little up
     let hoodShade = 1;
     const hoodPoint = (az: number, phi: number, o: THREE.Vector3, puffScale = 1) => {
       const dir = new THREE.Vector3(Math.sin(phi) * Math.cos(az), Math.sin(phi) * Math.sin(az), Math.cos(phi));
-      // Boxier crown, like a structured hood rather than a dome.
-      const box = (x: number) => Math.sign(x) * Math.pow(Math.abs(x), 0.78);
-      dir.set(box(dir.x), box(dir.y), dir.z);
-      // Horizontal baffles, like the torso.
-      const frac = ((dir.y + 1) / 2) * rings;
-      const amt = 0.025 * baffle(frac - Math.floor(frac)) * puffScale;
-      hoodShade = seamShade(frac, 0.15);
-      o.set(dir.x * R.x, dir.y * R.y, dir.z * R.z).addScaledVector(dir, amt).add(c);
-      return o;
+      dir.applyQuaternion(tilt);
+      const up = Math.max(0, dir.y);
+      o.set(dir.x * R.x, dir.y * R.y, dir.z * R.z);
+      // Slump: the crown sags and the sides spread where fabric pools.
+      o.y -= 0.045 * up * up;
+      o.x *= 1 + 0.12 * (1 - up);
+      // Soft folds rather than quilting.
+      const fold = Math.sin(az * 5 + phi * 2.3) * 0.5 + Math.sin(az * 3 - phi * 4.1) * 0.5;
+      o.addScaledVector(dir, (0.012 * fold + 0.02) * puffScale);
+      // One seam over the crown (centre panel).
+      const seam = Math.exp(-Math.pow(dir.x / 0.05, 2)) * up;
+      hoodShade = 1 - 0.18 * seam - 0.06 * (fold * 0.5 + 0.5);
+      return o.add(c);
     };
     const geo = buildSurface(
       (u, v, o) => {
@@ -277,7 +301,7 @@ export class Jacket {
       { cols: 96, rows: 60, wrapU: true, uvScale: [4, 3], inside: (_u, _v, o) => o.copy(c) },
     );
     this.addShell(geo);
-    this.addShell(this.ring((t, o) => hoodPoint(t, phi0, o, 0), 0.026, 0), false);
+    this.addShell(this.ring((t, o) => hoodPoint(t, phi0, o, 0.6), 0.03, 0), false);
     const top = new THREE.Object3D();
     top.position.set(0, c.y + R.y, c.z);
     this.anchors.hoodTop = top;
@@ -343,7 +367,14 @@ export class Jacket {
     ]);
     const len = curve.getLength();
     const frames = curve.computeFrenetFrames(160, false);
-    const nb = Math.max(4, Math.round(len / S.bh));
+    // The sleeve cap above the yoke seam is part of the smooth yoke; quilting
+    // starts below it, so the yoke reads as one panel across the shoulders.
+    const seamY = this.yokeY(0);
+    let vY = 0;
+    for (let k = 0; k <= 200; k++) {
+      if (curve.getPointAt(k / 200).y < seamY) { vY = k / 200; break; }
+    }
+    const nb = Math.max(3, Math.round((len * (1 - vY)) / S.bh));
     const N = new THREE.Vector3();
     const B = new THREE.Vector3();
     const radius = (v: number) => S.sleeveR * (1.12 - 0.3 * Math.sqrt(v));
@@ -353,10 +384,20 @@ export class Jacket {
       N.copy(frames.normals[i]);
       B.copy(frames.binormals[i]);
       const th = u * Math.PI * 2;
-      const frac = v * nb;
-      const r = radius(v) + S.puff * 0.6 * baffle(frac - Math.floor(frac)) * puffScale * smoothstep(0, 0.04, v);
+      let bulge: number;
+      let shade: number;
+      if (v < vY) {
+        const f = v / vY;
+        bulge = 0.8 * baffle(0.5 + f * 0.5, 0.55);
+        shade = seamShade(0.5 + f * 0.5, 0.2);
+      } else {
+        const frac = ((v - vY) / (1 - vY)) * nb;
+        bulge = baffle(frac - Math.floor(frac));
+        shade = seamShade(frac, 0.2);
+      }
+      const r = radius(v) + S.puff * 0.6 * bulge * puffScale * smoothstep(0, 0.04, v);
       o.addScaledVector(N, Math.cos(th) * r).addScaledVector(B, Math.sin(th) * r);
-      return seamShade(frac, 0.2);
+      return shade;
     };
     const geo = buildSurface((u, v, o) => at(u, v, o), {
       cols: 48,
