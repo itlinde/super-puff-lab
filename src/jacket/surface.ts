@@ -106,7 +106,7 @@ function weldSeamNormals(g: THREE.BufferGeometry, cols: number, rows: number) {
 }
 
 /** Quilted baffle profile: 0 at a seam, 1 at the fullest point of a baffle. */
-export function baffle(frac: number, softness = 0.38): number {
+export function baffle(frac: number, softness = 0.5): number {
   const s = Math.sin(Math.PI * THREE.MathUtils.clamp(frac, 0, 1));
   return Math.pow(s, softness);
 }

@@ -56,3 +56,6 @@ body {
 .review select { width: 100%; font: inherit; padding: 4px 6px; border: 1px solid #0000002a; background: #fff; border-radius: 0; }
 .review p { margin: var(--s-3) 0 0; font-size: 11px; color: var(--c-muted); }
 .review .variant-name { margin-top: var(--s-3); font-size: 12px; color: var(--c-ink); }
+
+/* Screenshot mode for silhouette comparisons */
+.bare .wordmark, .bare .grain { display: none; }

@@ -7,6 +7,7 @@ import { fitWordmark } from './stage/wordmark';
 import { mountReviewPanel, initialStateFromUrl } from './dev/reviewPanel';
 
 const params = new URLSearchParams(location.search);
+if (params.get('bare') === '1') document.body.classList.add('bare'); // screenshots: hide wordmark + grain
 const canvas = document.querySelector<HTMLCanvasElement>('.stage')!;
 const state = initialStateFromUrl(params);
 

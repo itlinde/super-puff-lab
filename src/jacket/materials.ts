@@ -133,7 +133,7 @@ export function makeShellMaterial(fabric: FabricId, colour: string): THREE.MeshP
 
 /** The inside of the jacket: same colour family, darker, always matte. */
 export function makeLiningMaterial(colour: string): THREE.MeshStandardMaterial {
-  const c = new THREE.Color(colour).multiplyScalar(0.62);
+  const c = new THREE.Color(colour).multiplyScalar(0.86);
   return new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, side: THREE.BackSide, envMapIntensity: 0.35, vertexColors: true });
 }
 

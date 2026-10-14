@@ -13,11 +13,11 @@ export interface JacketState {
 
 /** Torso wall height (shoulder line to hem), in scene units. */
 const LENGTH_VALUE: Record<Length, number> = {
-  xtrashorty: 0.55,
-  shorty: 0.8,
-  original: 1.12,
-  mid: 1.6,
-  long: 2.15,
+  xtrashorty: 0.62,
+  shorty: 0.92,
+  original: 1.33,
+  mid: 1.85,
+  long: 2.45,
 };
 
 interface Shape {
@@ -39,20 +39,21 @@ function shapeFor(s: JacketState): Shape {
   const stiff = s.fabric === 'rainstop' ? 0.85 : 1; // two-layer: a touch flatter
   return {
     L,
-    W: (slim ? 0.5 : 0.6) * (s.sleeves === 'vest' ? 0.9 : 1),
-    Dp: slim ? 0.32 : 0.38,
-    puff: (slim ? 0.03 : 0.048) * stiff,
-    bh: slim ? 0.16 : 0.21,
+    W: (slim ? 0.35 : 0.42) * (s.sleeves === 'vest' ? 0.95 : 1),
+    Dp: slim ? 0.27 : 0.31,
+    puff: (slim ? 0.026 : 0.04) * stiff,
+    bh: slim ? 0.2 : 0.25,
     flare: L > 1.3 ? 0.06 : 0.0,
     sleeves: s.sleeves === 'sleeves',
-    sleeveR: slim ? 0.13 : 0.165,
-    neckRx: slim ? 0.2 : 0.23,
-    neckRz: slim ? 0.19 : 0.22,
+    sleeveR: slim ? 0.1 : 0.125,
+    neckRx: slim ? 0.24 : 0.27,
+    neckRz: slim ? 0.2 : 0.22,
   };
 }
 
 const DOME = 0.2; // shoulder line -> neck
-const COLLAR = 0.34; // collar height
+const COLLAR = 0.3; // collar height
+const YOKE = 0.34; // depth of the smooth chest/shoulder yoke below the shoulder line
 
 /** Superellipse cross-section point and its outward normal direction. */
 function section(theta: number, rx: number, rz: number, out: THREE.Vector3, dir?: THREE.Vector3, n = 2.5) {
@@ -129,12 +130,24 @@ export class Jacket {
     if (y <= 0) {
       const t = -y / S.L; // 0 at shoulders, 1 at hem
       const flare = 1 + S.flare * t * t;
-      const tuck = 1 - 0.035 * smoothstep(0.88, 1, t); // hem draws in slightly
+      const tuck = 1 - 0.012 * smoothstep(0.9, 1, t); // hem draws in very slightly
       section(theta, S.W * flare * tuck, S.Dp * flare * tuck, p, dir);
-      const nb = Math.max(2, Math.round(S.L / S.bh));
-      const frac = (y + S.L) / (S.L / nb);
-      let amt = S.puff * baffle(frac - Math.floor(frac)) * puffScale;
-      this.lastShade = seamShade(frac);
+      // Smooth yoke across the chest and shoulders, quilted baffles below it.
+      const yoke = -YOKE;
+      let amt: number;
+      if (y > yoke) {
+        const f = (y - yoke) / (YOKE + DOME);
+        amt = S.puff * 0.9 * baffle(f, 0.7) * puffScale * Math.pow(Math.abs(Math.sin(theta)), 1.5);
+        this.lastShade = seamShade(f * 0.5, 0.2);
+      } else {
+        const span = S.L - YOKE;
+        const nb = Math.max(1, Math.round(span / S.bh));
+        const frac = (y + S.L) / (span / nb);
+        amt = S.puff * baffle(frac - Math.floor(frac)) * puffScale;
+        this.lastShade = seamShade(frac, 0.22);
+      }
+      // Down shifts to the front and back panels; the sides stay straighter.
+      amt *= 0.45 + 0.55 * Math.abs(Math.sin(theta));
       // Flatten under the front placket.
       const front = Math.exp(-Math.pow(p.x / 0.1, 2)) * (p.z > 0 ? 1 : 0);
       amt *= 1 - 0.85 * front;
@@ -151,8 +164,12 @@ export class Jacket {
     } else {
       // Shoulder dome: rounds from the shoulder line into the neck.
       const s = Math.min(y / DOME, 1);
-      const k = Math.pow(Math.max(0, 1 - Math.pow(s, 2.2)), 0.75);
+      // Sloped shoulders: near-vertical at the shoulder line, then a steady slope to the neck.
+      const k = 1 - Math.pow(s, 1.25);
       section(theta, S.neckRx + (S.W - S.neckRx) * k, S.neckRz + (S.Dp - S.neckRz) * k, p, dir);
+      const f = (y + YOKE) / (YOKE + DOME);
+      // Yoke fullness sits on the chest and back only, so the shoulder line stays clean.
+      p.addScaledVector(dir, S.puff * 0.9 * baffle(f, 0.7) * puffScale * Math.pow(Math.abs(Math.sin(theta)), 1.5));
       p.y = y;
       this.lastShade = 1;
     }
@@ -175,7 +192,7 @@ export class Jacket {
     this.addShell(torso);
 
     // Hem roll gives the open hem its thickness.
-    this.addShell(this.ring((t, o) => this.torsoPoint(t, -S.L, o, 0), 0.04, 0), false);
+    this.addShell(this.ring((t, o) => this.torsoPoint(t, -S.L, o, 0), 0.028, 0.012), false);
 
     this.buildCollar();
     this.buildHood();
@@ -214,9 +231,9 @@ export class Jacket {
     const flare = 1 + 0.06 * t;
     section(theta, S.neckRx * flare, S.neckRz * flare, out, dir);
     const frac = t * 2;
-    out.addScaledVector(dir, 0.035 * baffle(frac - Math.floor(frac)));
+    out.addScaledVector(dir, 0.02 * baffle(frac - Math.floor(frac)));
     out.y = y;
-    this.lastShade = seamShade(frac, 0.22);
+    this.lastShade = seamShade(frac, 0.12);
     return out;
   }
 
@@ -235,17 +252,20 @@ export class Jacket {
   // ----------------------------------------------------------------- hood
   private buildHood() {
     const S = this.shape;
-    const c = new THREE.Vector3(0, DOME + COLLAR * 0.78, -0.1);
-    const R = new THREE.Vector3(S.neckRx + 0.07, 0.33, 0.31);
-    const phi0 = 1.12; // half-angle of the face opening
-    const rings = 5;
+    const c = new THREE.Vector3(0, DOME + COLLAR * 0.6, -0.16);
+    const R = new THREE.Vector3(S.neckRx + 0.065, 0.27, 0.3);
+    const phi0 = 1.38; // half-angle of the face opening
+    const rings = 3;
     let hoodShade = 1;
     const hoodPoint = (az: number, phi: number, o: THREE.Vector3, puffScale = 1) => {
       const dir = new THREE.Vector3(Math.sin(phi) * Math.cos(az), Math.sin(phi) * Math.sin(az), Math.cos(phi));
+      // Boxier crown, like a structured hood rather than a dome.
+      const box = (x: number) => Math.sign(x) * Math.pow(Math.abs(x), 0.78);
+      dir.set(box(dir.x), box(dir.y), dir.z);
       // Horizontal baffles, like the torso.
       const frac = ((dir.y + 1) / 2) * rings;
-      const amt = 0.03 * baffle(frac - Math.floor(frac)) * puffScale;
-      hoodShade = seamShade(frac, 0.25);
+      const amt = 0.025 * baffle(frac - Math.floor(frac)) * puffScale;
+      hoodShade = seamShade(frac, 0.15);
       o.set(dir.x * R.x, dir.y * R.y, dir.z * R.z).addScaledVector(dir, amt).add(c);
       return o;
     };
@@ -257,7 +277,7 @@ export class Jacket {
       { cols: 96, rows: 60, wrapU: true, uvScale: [4, 3], inside: (_u, _v, o) => o.copy(c) },
     );
     this.addShell(geo);
-    this.addShell(this.ring((t, o) => hoodPoint(t, phi0, o, 0), 0.045, 0), false);
+    this.addShell(this.ring((t, o) => hoodPoint(t, phi0, o, 0), 0.026, 0), false);
     const top = new THREE.Object3D();
     top.position.set(0, c.y + R.y, c.z);
     this.anchors.hoodTop = top;
@@ -291,9 +311,10 @@ export class Jacket {
 
     // Snaps: one per baffle, plus two on the collar.
     const snapGeo = ensureColor(new THREE.CylinderGeometry(0.019, 0.019, 0.012, 20).rotateX(Math.PI / 2), 0.9);
-    const nb = Math.max(2, Math.round(S.L / S.bh));
-    const ys: number[] = [];
-    for (let i = 0; i < nb; i++) ys.push(-S.L + (i + 0.5) * (S.L / nb));
+    const span = S.L - YOKE;
+    const nb = Math.max(1, Math.round(span / S.bh));
+    const ys: number[] = [-YOKE * 0.45];
+    for (let i = 0; i < nb; i++) ys.push(-S.L + (i + 0.5) * (span / nb));
     ys.push(DOME + COLLAR * 0.3, DOME + COLLAR * 0.72);
     for (const y of ys) {
       const p = front(0, y, new THREE.Vector3());
@@ -308,18 +329,24 @@ export class Jacket {
   private buildSleeve(side: 1 | -1) {
     const S = this.shape;
     const W = S.W;
+    // Sleeve centre sits so its inner edge just meets the torso.
+    const hang = W + S.puff + (S.sleeveR + S.puff * 0.7) * 0.8;
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(side * W * 0.62, -0.1, 0),
-      new THREE.Vector3(side * (W + 0.14), -0.3, 0.02),
-      new THREE.Vector3(side * (W + 0.25), -0.72, 0.08),
-      new THREE.Vector3(side * (W + 0.27), -1.1, 0.15),
+      // Drop shoulder, then the sleeve hangs straight down against the body.
+      // Raglan-like line: the sleeve starts near the collar so the shoulder
+      // slopes continuously into the arm, as on the reference.
+      new THREE.Vector3(side * W * 0.42, DOME * 0.55, 0),
+      new THREE.Vector3(side * (W * 0.42 + hang) * 0.5, -0.04, 0),
+      new THREE.Vector3(side * hang, -0.34, 0.01),
+      new THREE.Vector3(side * (hang + 0.015), -0.85, 0.03),
+      new THREE.Vector3(side * (hang + 0.025), -1.5, 0.06),
     ]);
     const len = curve.getLength();
     const frames = curve.computeFrenetFrames(160, false);
-    const nb = Math.max(4, Math.round(len / (S.bh * 0.95)));
+    const nb = Math.max(4, Math.round(len / S.bh));
     const N = new THREE.Vector3();
     const B = new THREE.Vector3();
-    const radius = (v: number) => S.sleeveR * (1 - 0.28 * v);
+    const radius = (v: number) => S.sleeveR * (1.12 - 0.3 * Math.sqrt(v));
     const at = (u: number, v: number, o: THREE.Vector3, puffScale = 1) => {
       const i = Math.min(160, Math.round(v * 160));
       curve.getPointAt(v, o);
@@ -327,9 +354,9 @@ export class Jacket {
       B.copy(frames.binormals[i]);
       const th = u * Math.PI * 2;
       const frac = v * nb;
-      const r = radius(v) + S.puff * 0.7 * baffle(frac - Math.floor(frac)) * puffScale * smoothstep(0, 0.04, v);
+      const r = radius(v) + S.puff * 0.6 * baffle(frac - Math.floor(frac)) * puffScale * smoothstep(0, 0.04, v);
       o.addScaledVector(N, Math.cos(th) * r).addScaledVector(B, Math.sin(th) * r);
-      return seamShade(frac);
+      return seamShade(frac, 0.2);
     };
     const geo = buildSurface((u, v, o) => at(u, v, o), {
       cols: 48,
@@ -369,8 +396,8 @@ export class Jacket {
     const collarFront = this.collarSection(Math.PI / 2, collarTop - 0.02, new THREE.Vector3()).z;
 
     // Logo tab hanging from the collar.
-    const tab = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 0.16), new THREE.MeshStandardMaterial({ map: logoTabTexture(), roughness: 0.6 }));
-    tab.position.set(0.0, collarTop - 0.1, collarFront + 0.06);
+    const tab = new THREE.Mesh(new THREE.PlaneGeometry(0.042, 0.3), new THREE.MeshStandardMaterial({ map: logoTabTexture(), roughness: 0.6 }));
+    tab.position.set(0.0, collarTop - 0.17, collarFront + 0.065);
     this.group.add(tab);
     this.anchors.tab = tab;
 
@@ -379,10 +406,10 @@ export class Jacket {
     const cordGeo = new THREE.CylinderGeometry(0.005, 0.005, 0.07, 6);
     for (const side of [1, -1]) {
       const cord = new THREE.Mesh(cordGeo, trimMaterials.cord);
-      cord.position.set(side * 0.2, collarTop - 0.04, collarFront - 0.08);
+      cord.position.set(side * S.neckRx * 0.72, collarTop + 0.01, collarFront - 0.1);
       this.group.add(cord);
       const tog = new THREE.Mesh(toggleGeo, trimMaterials.toggle);
-      tog.position.set(side * 0.2, collarTop - 0.09, collarFront - 0.07);
+      tog.position.set(side * S.neckRx * 0.72, collarTop - 0.04, collarFront - 0.08);
       tog.castShadow = true;
       this.group.add(tog);
       this.anchors[side > 0 ? 'hoodToggleR' : 'hoodToggleL'] = tog;
